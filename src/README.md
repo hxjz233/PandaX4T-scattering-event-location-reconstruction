@@ -64,55 +64,55 @@ graph showing:
     
 **Estimate approximate event location.**
     
-  **Estimate largest interpolated intensity location.**
+&emsp;**Estimate largest interpolated intensity location.**
     
-    **if rLargest >= 560mm**
+&emsp;&emsp;**if rLargest >= 560mm**
     
-      **event location is at 570mm**
+&emsp;&emsp;&emsp;**event location is at 570mm**
     
-      (In earlier tests, max intensity location shows at 570mm roughly for any event at 540mm - 600mm radial distance. Have not come up with a valid algorithm to evaluate these event yet.)
+&emsp;&emsp;&emsp;(In earlier tests, max intensity location shows at 570mm roughly for any event at 540mm - 600mm radial distance. Have not come up with a valid algorithm to evaluate these event yet.)
     
-    else
+&emsp;&emsp;else
     
-      use COG to estimate approximate location.
+&emsp;&emsp;&emsp;use COG to estimate approximate location.
             
 if rapproximate <= 300mm (central events)
     
-  **R-L deconvolution**
+&emsp;**R-L deconvolution**
     
 else if 300mm < rapproximate < 560mm (margin events)
     
-  **rotate the signal image** so that the event aligns to \theta = 0. 
+&emsp;**rotate the signal image** so that the event aligns to \theta = 0. 
     
-  **mirror the signal** by line x = 600mm.
+&emsp;**mirror the signal** by line x = 600mm.
     
-  **linearly interpolate** signals between.(In earlier tests, cubic interpolation raises more noise)
+&emsp;**linearly interpolate** signals between.(In earlier tests, cubic interpolation raises more noise)
     
-**R-L deconvolution**
+&emsp;**R-L deconvolution**
         
-  **Cluster the deconvoluted signal.**
+**Cluster the deconvoluted signal.**
     
-  for every single intensity on the meshgrid, change the value to its relative intensity to the largest intensity on the gird. Then multiply them by a weight, serving as threshold of collecting the specific intensity or not, and by more times or less. For this code, we take the number 20, and collect the specific coordinate int(20 * relative intensity) times.
+&emsp;for every single intensity on the meshgrid, change the value to its relative intensity to the largest intensity on the gird. Then multiply them by a weight, serving as threshold of collecting the specific intensity or not, and by more times or less. For this code, we take the number 20, and collect the specific coordinate int(20 * relative intensity) times.
     
-  (BGMM takes discrete point coordinates as input, and gives a way of clustering them binormally, while giving the centers a weight referring to the ratio of how many points belonged to it. It is necessary to turn float numbers referring to intensity on the mesh into discrete coordinate sets.
+&emsp;(BGMM takes discrete point coordinates as input, and gives a way of clustering them binormally, while giving the centers a weight referring to the ratio of how many points belonged to it. It is necessary to turn float numbers referring to intensity on the mesh into discrete coordinate sets.
     
-  Practically, no obvious change occured if a random number was added to the coordinates, dispersing the points.)
+&emsp;Practically, no obvious change occured if a random number was added to the coordinates, dispersing the points.)
     
-  if weight of any cluster set < multithreshold
+&emsp;if weight of any cluster set < multithreshold
     
-    the component is abandoned. Event numbers should have been less than that set in forehand
+&emsp;&emsp;the component is abandoned. Event numbers should have been less than that set in forehand
   
-This steps gives a reference for exactly how many events occured.
+(This steps gives a reference for exactly how many events occured.)
         
 **Cluster the interpolated intensity**
     
-  Similarly, point_weight changing float numbers into point numbers is necessary. It is set 2 for the case.
+&emsp;Similarly, point_weight changing float numbers into point numbers is necessary. It is set 2 for the case.
   
-  (The earlier clustering, however, brings the center closer to each other than expected. It is supposed that instant cluster to the intensity signal may bring a more likely result.)
+&emsp;(The earlier clustering, however, brings the center closer to each other than expected. It is supposed that instant cluster to the intensity signal may bring a more likely result.)
     
-  For a central case, the cluster center number is set the same as the result of the last step, and clusters directly on the interpolated intensity.
+&emsp;For a central case, the cluster center number is set the same as the result of the last step, and clusters directly on the interpolated intensity.
     
-  For a margin event, the cluster center number is set 2 * eventnum, and clusters on the whole mirrored and re-interpolated signal, considering that it may perform better if the event and 'mirrored event' signal were put together and clustered.
+&emsp;For a margin event, the cluster center number is set 2 * eventnum, and clusters on the whole mirrored and re-interpolated signal, considering that it may perform better if the event and 'mirrored event' signal were put together and clustered.
         
 **Visualization** of above variables (Rotate coordinates back if necessary)
     
@@ -172,7 +172,7 @@ Some margin events may throw 3 or 1 event center results at the last cluster ste
     
   **Cluster on the intensity** in mostly the same way in RL+BGMM, but with poihtweight = 2, and n_init = 10 for mirrored margin event signals, which asks for 10 initializations to perform, in order to prevent asymmetric cluster results. Meanwhile, $ \gamma_0 = 1 \times 10^(-3) $, in order to cluster with minimum opponents neccesary.
     
-    Check components' weight after clustering, and if any component's weight is less than *multithreshold*, then cluster again with 1 less n_component, until all weights are higher than the threshold.
+  &emsp;Check components' weight after clustering, and if any component's weight is less than *multithreshold*, then cluster again with 1 less n_component, until all weights are higher than the threshold.
     
   **Visualization**
   
