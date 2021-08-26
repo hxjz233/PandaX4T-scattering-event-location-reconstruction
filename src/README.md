@@ -102,7 +102,7 @@ else if 300mm < rapproximate < 560mm (margin events)
     
 &emsp;&emsp;the component is abandoned. Event numbers should have been less than that set in forehand
   
-(This steps gives a reference for exactly how many events occured.)
+(The above step forms the result 'RL+BGMM')
         
 **Cluster the interpolated intensity**
     
@@ -113,6 +113,8 @@ else if 300mm < rapproximate < 560mm (margin events)
 &emsp;For a central case, the cluster center number is set the same as the result of the last step, and clusters directly on the interpolated intensity.
     
 &emsp;For a margin event, the cluster center number is set 2 * eventnum, and clusters on the whole mirrored and re-interpolated signal, considering that it may perform better if the event and 'mirrored event' signal were put together and clustered.
+
+(The above step forms the result 'RL+BGMM2')
         
 **Visualization** of above variables (Rotate coordinates back if necessary)
     
