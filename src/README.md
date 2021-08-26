@@ -3,13 +3,14 @@
 ## input
 txt file under dir.
 ### format: 
-PMTID x_coordinate y_coordinate intensity
-#### last 8 lines:
+"<PMTID> <x_coordinate> <y_coordinate> <intensity>" for each line
+last 8 lines:
 -8:-3 : 3 pairs of other algorithms' results
 -2:-1 : z coordinate evaluated, energy evaluated
 The 8 lines are not necessary for the algorithm itself, but for comparison and visualization
                                                 
-## output: graph showing: 
+## output:
+graph showing: 
 1. direct interpolation of PMT intensities;
 2. image refering to signal processed by R-L algorithm;
 3. BGMM Clustering result of deconvoluted image;
@@ -71,7 +72,42 @@ The 8 lines are not necessary for the algorithm itself, but for comparison and v
 
 # PSF template calculation (first attempt)
 
+## input
+  Event data file with the same format in RL+BGMM.
+  It is preferred to input a series of low-energy real run event data, so that the template would be mostly set up by single-scattering events, and adds up to the diffusion of a single event.
+  
+## output:
+  "templatewhole.csv", at size 581 * 581, presenting average diffusion of an event
+  
+## Algorithm outline:
+  **Take input**
+  **Estimate the location of max intensity.**
+    and only take Rmax <= 300mm events as filted input for PSF calculation.
+  **Interpolate signal on 1200mm x 1200mm meshgrid.**
+  **Use COG to estimate event center location.**
+    It is possible to estimate event location with other algorithms, which may lead to different PSFs. However, we do suppose that COG estimation is enough for the central events.
+  **Change the frame, so that the signals align to each other at their COGs**
+  **Add up the signals and Unify the PSF, so that the sum of PSF meshgrid values adds to 1**
+  **Save the PSF result to .csv format**
+
+## Possible arguments for optimization:
+  - PSFsize, which decides the final output PSF's size by side length = 2 * PSFsize + 1
+  - Center alignment. In this case we used COG to estimate event center, but the validity of the method is not guaranteed, and may lead to system errors.
+
+## Other issues:
+      
 # PSF template calculation (refinement)
+
+## input & output
+  The same as PSF template calculation (first attempt)
+      
+## Algorithm outline:
+  The same as PSF template calculation (first attempt), despite that: for the filter, also used PSF derived from "first attempt" and RL+BGMM to estimate whether the event do be a single scattering event.
+
+## Possible arguments for optimization:
+  This part pretty much relies on the precision of PSF derived from "first attempt" & the validity of the RL+BGMM method, so there is no explicit arguments for the optimization.
+      
+## Other issues:
 
 # Pure BGMM
 
