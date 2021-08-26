@@ -311,4 +311,4 @@ for i in range(len(dataInProcess)):
     processendtime = time.time()
     print(str(i + 1) + " finished! elapsed time: " + str(processendtime - processstarttime))
     
-print("all finished!\nOversize events:\n" + '\n'.join(dataoversize) + "\nEvents failed deconvolution:\n" + '\n'.join(datafailed) + "\nAsymmetric clusters:\n" + '\n'.join(dataasymmetric))
+print("all finished!\nOversize events:\n" + '\n'.join(dataoversize) + "\nAsymmetric clusters:\n" + '\n'.join(dataasymmetric))
