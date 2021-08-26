@@ -3,7 +3,7 @@
 ## input
 txt file under dir.
 ### format: 
-  "<PMTID> <x_coordinate> <y_coordinate> <intensity>" for each line
+  " <PMTID> <x_coordinate> <y_coordinate> <intensity> " for each line
   
   last 8 lines:
   
