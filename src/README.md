@@ -1,14 +1,40 @@
-# R-L + BGMM
+# PSF template calculation (first attempt)
 
 ## input
 txt file under dir.
 ### format: 
-"<PMTID> <x_coordinate> <y_coordinate> <intensity>" for each line
-last 8 lines:
--8:-3 : 3 pairs of other algorithms' results
--2:-1 : z coordinate evaluated, energy evaluated
-The 8 lines are not necessary for the algorithm itself, but for comparison and visualization
-                                                
+  "<PMTID> <x_coordinate> <y_coordinate> <intensity>" for each line
+  last 8 lines:
+  -8:-3 : 3 pairs of other algorithms' results
+  -2:-1 : z coordinate evaluated, energy evaluated
+  The 8 lines are not necessary for the algorithm itself, but for comparison and visualization
+### notes:
+    It is preferred to input a series of low-energy real run event data, so that the template would be mostly set up by single-scattering events, and adds up to the diffusion of a single event.
+  
+## output:
+  "templatewhole.csv", at size 581 * 581, presenting average diffusion of an event
+  
+## Algorithm outline:
+  **Take input**
+  **Estimate the location of the PMT with max intensity.**
+    and only take R_maxintensity <= 300mm events as filted input for PSF calculation.
+  **Interpolate signal on 1200mm x 1200mm meshgrid.**
+  **Use COG to estimate event center location.**
+    It is possible to estimate event location with other algorithms, which may lead to different PSFs. However, we do suppose that COG estimation is enough for the central events.
+  **Change the frame, so that the signals align to each other at their COGs**
+  **Add up the signals and Unify the PSF, so that the sum of PSF meshgrid values adds to 1**
+  **Save the PSF result to .csv format**
+
+## Possible arguments for optimization:
+  - PSFsize, which decides the final output PSF's size by side length = 2 * PSFsize + 1
+  - Center alignment. In this case we used COG to estimate event center, but the validity of the method is not guaranteed, and may lead to system errors.
+
+## Other issues:
+      
+# R-L + BGMM
+## input
+  Event data file with the same format in **PSF template calculation (first attempt)**.
+      
 ## output:
 graph showing: 
 1. direct interpolation of PMT intensities;
@@ -70,36 +96,11 @@ graph showing:
     
     Some margin events may throw 3 or 1 event center results at the last cluster step, when 2 events were estimated forehand. This means the last cluster centers are not symmetric to x = 600mm on the whole mirrored signal, and these events should however be clustered again, or even with random initial cluster centers.
 
-# PSF template calculation (first attempt)
 
-## input
-  Event data file with the same format in RL+BGMM.
-  It is preferred to input a series of low-energy real run event data, so that the template would be mostly set up by single-scattering events, and adds up to the diffusion of a single event.
-  
-## output:
-  "templatewhole.csv", at size 581 * 581, presenting average diffusion of an event
-  
-## Algorithm outline:
-  **Take input**
-  **Estimate the location of max intensity.**
-    and only take Rmax <= 300mm events as filted input for PSF calculation.
-  **Interpolate signal on 1200mm x 1200mm meshgrid.**
-  **Use COG to estimate event center location.**
-    It is possible to estimate event location with other algorithms, which may lead to different PSFs. However, we do suppose that COG estimation is enough for the central events.
-  **Change the frame, so that the signals align to each other at their COGs**
-  **Add up the signals and Unify the PSF, so that the sum of PSF meshgrid values adds to 1**
-  **Save the PSF result to .csv format**
-
-## Possible arguments for optimization:
-  - PSFsize, which decides the final output PSF's size by side length = 2 * PSFsize + 1
-  - Center alignment. In this case we used COG to estimate event center, but the validity of the method is not guaranteed, and may lead to system errors.
-
-## Other issues:
-      
 # PSF template calculation (refinement)
 
 ## input & output
-  The same as PSF template calculation (first attempt)
+  The same as **PSF template calculation (first attempt)**
       
 ## Algorithm outline:
   The same as PSF template calculation (first attempt), despite that: for the filter, also used PSF derived from "first attempt" and RL+BGMM to estimate whether the event do be a single scattering event.
@@ -110,5 +111,32 @@ graph showing:
 ## Other issues:
 
 # Pure BGMM
-
-@author: Zhuowei Zhang
+## input
+  Event data file with the same format in **PSF template calculation (first attempt)**.
+      
+## output:
+  graph showing: 
+  1. direct interpolation of PMT intensities;
+  2. the cluster result, where colors refer to the component the specific point most likely belonged to;
+  3. Comparison of: other 3 algorithms, and BGMM result, where event center provided by component center.
+      
+## algorithm outline:
+  **same input & interpolation step** as RL-BGMM
+  **separate event types** by R < 450mm(central), 450mm <= R < 550mm(margin), R >= 550mm(oversize)
+  **same rotation & mirror step** as RL-BGMM
+  **Cluster on the intensity** in mostly the same way in RL+BGMM, but with poihtweight = 2, and n_init = 10 for mirrored margin event signals, which asks for 10 initializations to perform, in order to prevent asymmetric cluster results. Meanwhile, $ \gamma_0 = 1 \times 10^(-3) $, in order to cluster with minimum opponents neccesary.
+      Check components' weight after clustering, and if any component's weight is less than *multithreshold*, then cluster again with 1 less n_component, until all weights are higher than the threshold.
+  **Visualization**
+  
+## Possible arguments for optimization:
+    - radial borderline deciding if a central/margin event happened, 450mm at the time
+    - multithreshold, deciding when to abandon a cluster set
+    - pointweight, deciding the fineness as collecting intensity when need to cluster
+    - cluster covariance, served as input for BGMM function. Preferred 'spherical' or 'full'(default)
+    - cluster iteration, 10000 in this code is enough for clustering process to converge, but may be optimized if the function logged that it did not converge for certain input
+      
+## Other issues:
+      
+## Notes
+  This algorithm does not abandon oversize events and yields $ 57 \pm 3 cm $ results. Instead, it is processed exactly like how margin events were processed. The oversize estimation gives merely a label, but will not affect how it is processed.
+@author: hxjz233@sjtu.edu.cn
