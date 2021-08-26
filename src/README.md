@@ -13,7 +13,7 @@ txt file under dir.
   
   The 8 lines are not necessary for the algorithm itself, but for comparison and visualization
 ### notes:
-    It is preferred to input a series of low-energy real run event data, so that the template would be mostly set up by single-scattering events, and adds up to the diffusion of a single event.
+It is preferred to input a series of low-energy real run event data, so that the template would be mostly set up by single-scattering events, and adds up to the diffusion of a single event.
   
 ## output:
   "templatewhole.csv", at size 581 * 581, presenting average diffusion of an event
