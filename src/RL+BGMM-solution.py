@@ -12,7 +12,7 @@ from pylab import *
 from sklearn.mixture import BayesianGaussianMixture
 import time
 
-dir = 'Testsinglecenter'                # data directory
+dir = 'testdata'                # data directory
 multithreshold = 0.22
 PSFsize = 200
 deconiter = 200
@@ -101,15 +101,13 @@ for i in range(len(dataInProcess)):
     if maxlocx ** 2 + maxlocy ** 2 >= 560 ** 2:          # oversize event
         appx = maxlocx
         appy = maxlocy
-        eventtype = 'oversized'     
-        '''
+        eventtype = 'oversized'            
         print("Event in " + dataInProcess[i] + " seemed to occur somewhere between the center of the farthest PMT and the wall. No algorithm found valid for this type of event yet. You can refer to x = " + str(appx) +", y = " + str(appy) + ", however, for a single oversized event, by 3 cm radial error\n")
         dataoversize.append(dataInProcess[i])
         #visualization skipped
         processendtime = time.time()
         print(str(i + 1) + " finished! elapsed time: " + str(processendtime - processstarttime))
         continue
-    '''
     else:
         COGdataslice = preprocess[max(0, maxlocy + 600 - 300) : min(1200, maxlocy + 600 + 300 + 1), max(0, maxlocx + 600 - 300) : min(1200, maxlocx + 600 + 300 + 1)]
         appx, appy = COGcut(COGdataslice, 0.1)
@@ -227,76 +225,65 @@ for i in range(len(dataInProcess)):
         meansdec = np.swapaxes(meansdec, 0, 1)
             
 # clustering on intensity image, estimates event center location
-    dots = np.empty([0,2])
-    pointweight = preprocess / np.max(preprocess) * 2    
-    
+    dellist = []
     if eventtype == 'central':
+        dots = np.empty([0,2])
+        pointweight = preprocess / np.max(preprocess) * 2
+        
         for j in range(max(0, appy + 600 - 200), min(1200, appy + 600 + 200 + 1)):
             for k in range(max(0, appx + 600 - 200), min(1200, appx + 600 + 200 + 1)):
                 if pointweight[j,k] >= 1:
                     dots = np.append(dots, np.tile(np.array([k - 600, j - 600]), (int(pointweight[j,k]), 1)), axis = 0)
-        #print(dots[-1:])
-    
-        eventnum = 2
-        weights = 0
-        while eventnum > 0 and np.any(weights < multithreshold):
-            dpgmm = BayesianGaussianMixture(n_components=eventnum, covariance_type='spherical', max_iter = 10000,weight_concentration_prior_type='dirichlet_distribution', weight_concentration_prior=1e-3).fit(dots)
-            weights = dpgmm.weights_
-            print(weights)
-            eventnum -= 1
-    
-        eventnum += 1
-        means = np.swapaxes(dpgmm.means_, 0, 1)
+            #print(dots[-1:])
+            
+        #bgm = BayesianGaussianMixture(n_components=2, random_state=0, covariance_type='spherical', max_iter = 2000).fit(dots)
+        bgm = BayesianGaussianMixture(n_components=eventnum, random_state=0, max_iter = 2000).fit(dots)
+        means = bgm.means_
+        weights = bgm.weights_
+        #print(means, weights)
         
-    else:
+        for j in range(len(weights)):
+            if weights[j] < multithreshold:
+                dellist.append(j)
+        means = np.delete(means, dellist, axis = 0)
+        weights = np.delete(weights, dellist)
+        means = np.swapaxes(means, 0, 1)
+        
+    elif eventtype == 'margin':
+        dots = np.empty([0,2])
+        pointweight = preprocess / np.max(preprocess) * 2
+        
         for j in range(800):
             for k in range(1400):
                 if pointweight[j,k] >= 1:
                     dots = np.append(dots, np.tile(np.array([k - 100, j - 400]), (int(pointweight[j,k]), 1)), axis = 0)
             #print(dots[-1:])
-        
-        eventnum = 2
-        weights = 0
-        while eventnum > 0 and np.any(weights < multithreshold / 2):
-            dpgmm = BayesianGaussianMixture(n_components=eventnum*2, covariance_type='spherical', n_init=10, max_iter = 10000,weight_concentration_prior_type='dirichlet_distribution', weight_concentration_prior=1e-3).fit(dots)
-            weights = dpgmm.weights_
-            print(weights)
-            eventnum -= 1
-    
-        eventnum += 1
-        means = dpgmm.means_
-        print(means)
-        '''    
+            
         bgm = BayesianGaussianMixture(n_components=eventnum*2, random_state=0, covariance_type='spherical', max_iter = 2000).fit(dots)
         #bgm = BayesianGaussianMixture(n_components=eventnum*2, random_state=0, max_iter = 2000).fit(dots)
         means = bgm.means_
         weights = bgm.weights_
         #print(means, weights)
-        '''
-        dellist = []
+        
         for j in range(len(weights)):
+            #if weights[j] < multithreshold / 2:
+            #    dellist.append(j)
             if means[j, 0] ** 2 + means[j, 1] ** 2 > 600 ** 2:
                 dellist.append(j)
         means = np.delete(means, dellist, axis = 0)
         weights = np.delete(weights, dellist)
         weights *= 2
         means = np.swapaxes(means, 0, 1)
-        meansinmirror = means.copy()
-        
-        print(means)
         
         #rotate to original frame
         angle = math.radians(angle)
         euler = np.array([[np.cos(angle), -np.sin(angle)], [np.sin(angle), np.cos(angle)]])
         means = np.dot(euler, means)
-        
-        print(means)
     
     resultsangle = 0
     if len(weights) != eventnum:
-        print("===It seems that a margin event was clustered with asymmetric result.===")
+        print("It seems that a margin event was clustered with asymmetric result.")
         dataasymmetric.append(dataInProcess[i])
-        '''
     if len(weights) == 2: # output angle
         meansdec = np.swapaxes(meansdec, 0, 1)
         means = np.swapaxes(means, 0, 1)
@@ -304,9 +291,10 @@ for i in range(len(dataInProcess)):
         vecdecclus = meansdec[0] - meansdec[1]
         vecinstclus = means[0] - means[1]
         resultsangle = math.degrees(math.acos(np.abs(np.dot(vecdecclus, vecinstclus)) / (np.linalg.norm(vecdecclus) * np.linalg.norm(vecinstclus))))
-        means = np.swapaxes(means, 0, 1)
+        
         meansdec = np.swapaxes(meansdec, 0, 1)
-    '''
+        means = np.swapaxes(means, 0, 1)
+    
 # COG for each event in deconvoluted image(only one event by the time)
 #    COGdataslice = decon[max(0, appy + 600 - 100) : min(1200, appy + 600 + 100 + 1), max(0, appx + 600 - 100) : #min(1200, appx + 600 + 100 + 1)]
 #    RLCOGx, RLCOGy = COGcut(COGdataslice, 0.01)
@@ -361,17 +349,7 @@ for i in range(len(dataInProcess)):
     
     # comparison with other algorithms
     plt.subplot(2,2,4)
-    ud = [appy + 600 - 200 , appy + 600 + 200]
-    lr = [appx + 600 - 200 , appx + 600 + 200]
-    if ud[0] < 0:
-        ud = [0, 400]
-    if ud[1] > 1200:
-        ud = [800, 1200]
-    if lr[0] < 0:
-        lr = [0, 400]
-    if lr[1] > 1200:
-        lr = [800, 1200]
-    textstr = 'BGMMweight:\n' + str(weights) + '\nBGMMs angle:\n' + str(resultsangle) + '°'
+    textstr = 'BGMM2weight:\n' + str(weights) + '\nBGMMs angle:\n' + str(resultsangle) + '°'
     plt.text(0.05,0.8,textstr,size=10,transform=ax4.transAxes,bbox=dict(boxstyle="round",alpha=0.6,ec=(0.5,0.5,1.),fc=(0.8,0.8,1.)))
     meansdec = np.dot(euler, meansdec)
     plt.scatter(x, y, s = 400, alpha = 0.8, c = [intens], cmap = 'gist_heat')
@@ -379,19 +357,19 @@ for i in range(len(dataInProcess)):
     plt.scatter(x = xTMs, y = yTMs, s = 150, alpha = 0.6, edgecolors = 'black', marker = 'o', label = 'TMs')
     plt.scatter(x = xPAF, y = yPAF, s = 150, alpha = 0.6, edgecolors = 'black', marker = 's', label = 'PAF')
     plt.scatter(meansdec[0], meansdec[1], s = 300 * weightsdec, alpha = 0.6, edgecolors = 'orange', marker='*', label = 'RL+BGMM')
-    plt.scatter(means[0], means[1], s = 300 * weights, alpha = 0.6, edgecolors = 'orange', marker = 'X', label = 'BGMM')
+    plt.scatter(means[0], means[1], s = 300 * weights, alpha = 0.6, edgecolors = 'orange', marker = 'X', label = 'RL+BGMM2')
     #plt.scatter(x = RLCOGx, y = RLCOGy, s = 150, alpha = 0.6, edgecolors = 'black', marker = '*', label = 'RL')
     plt.legend(loc = "lower left")
     plt.xlabel('x (mm)')
     plt.ylabel('y (mm)')
     plt.title('Comparison with Other Algorithms')
-    plt.imshow(interp[ud[0] : ud[1], lr[0] : lr[1]], extent=(lr[0] - 600, lr[1] - 600, ud[0] - 600, ud[1] - 600), origin = 'lower', cmap = 'Blues')
+    plt.imshow(interp[appy + 600 - 200 : appy + 600 + 200, appx + 600 - 200 : appx + 600 + 200], extent=(appx - 200, appx + 200, appy - 200, appy + 200), origin = 'lower', cmap = 'Blues' )
     
     plt.suptitle('File Name:' + dataInProcess[i] + '\nEvent Type: ' + eventtype + '    ' + str(eventnum) + ' event(s) occured')
     
-    plt.show()
+    #plt.show()
     # Save plot. Requires folder "result" before running. Replaces '.txt' in output file name.
-    #plt.savefig('result/multivalidity/' + dataInProcess[i][:-4] + '.png')
+    plt.savefig('result/multivalidity/' + dataInProcess[i][:-4] + '.png')
     
     plt.clf()
     
